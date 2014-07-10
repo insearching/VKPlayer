@@ -1,14 +1,13 @@
-package com.android.myapplication;
+package com.android.vkplayer;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import com.android.myapplication.utils.Credentials;
-import com.android.myapplication.utils.KeyMap;
+import com.android.vkplayer.utils.Credentials;
+import com.android.vkplayer.utils.KeyMap;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -31,13 +30,14 @@ public class LoginActivity extends Activity {
                 try {
                     URL url = new URL(urlStr);
 
+                    if(url.getRef() == null)
+                        return false;
                     if (url.getProtocol().equals("https") && url.getHost().equals("oauth.vk.com")
                             && url.getRef().contains(KeyMap.ACCESS_TOKEN)) {
                         String accessToken = getAccessToken(url.getRef());
                         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                         intent.putExtra(KeyMap.ACCESS_TOKEN, accessToken);
                         startActivity(intent);
-                        Log.d(TAG, accessToken);
                     } else {
                         view.loadUrl(urlStr);
                     }

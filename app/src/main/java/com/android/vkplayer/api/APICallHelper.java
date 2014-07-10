@@ -1,4 +1,4 @@
-package com.android.myapplication.api;
+package com.android.vkplayer.api;
 
 import android.content.Context;
 import android.os.AsyncTask;

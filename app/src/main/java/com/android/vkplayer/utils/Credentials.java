@@ -1,4 +1,4 @@
-package com.android.myapplication.utils;
+package com.android.vkplayer.utils;
 
 /**
  * Created by insearching on 07.07.2014.

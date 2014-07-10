@@ -1,4 +1,4 @@
-package com.android.myapplication;
+package com.android.vkplayer;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

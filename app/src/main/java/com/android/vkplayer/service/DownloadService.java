@@ -1,4 +1,4 @@
-package com.android.myapplication.service;
+package com.android.vkplayer.service;
 
 import android.app.Service;
 import android.content.Intent;

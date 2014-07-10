@@ -1,19 +1,21 @@
-package com.android.myapplication.service;
+package com.android.vkplayer.service;
 
 import android.app.Service;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.IBinder;
 
-import com.android.myapplication.utils.KeyMap;
+import com.android.vkplayer.utils.KeyMap;
 
 import java.io.IOException;
 
 public class PlayerService extends Service {
     private MediaPlayer player;
     private String mUrl = null;
+    private String path = null;
     private boolean isRunning;
     private PlayerTask task;
 
@@ -48,7 +50,10 @@ public class PlayerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        mUrl = intent.getExtras().getString(KeyMap.URL);
+        Bundle extras = intent.getExtras();
+        mUrl = extras.getString(KeyMap.URL);
+        if(extras.containsKey(KeyMap.FILE_PATH))
+            path = extras.getString(KeyMap.FILE_PATH);
 
         if (!isRunning) {
             isRunning = true;
@@ -68,16 +73,17 @@ public class PlayerService extends Service {
             player.pause();
             player.release();
         }
-
     }
 
     class PlayerTask extends AsyncTask<String, Void, Void> {
-
         @Override
         protected Void doInBackground(String... params) {
             try {
                 player = new MediaPlayer();
-                player.setDataSource(mUrl);
+                if(path != null)
+                    player.setDataSource(path + mUrl);
+                else
+                    player.setDataSource(mUrl);
                 player.prepare();
 
             } catch (IOException e) {

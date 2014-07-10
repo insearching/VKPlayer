@@ -1,4 +1,4 @@
-package com.android.myapplication;
+package com.android.vkplayer;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -17,12 +17,12 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.android.myapplication.api.APICallHelper;
-import com.android.myapplication.entity.Song;
-import com.android.myapplication.service.DownloadService;
-import com.android.myapplication.service.PlayerService;
-import com.android.myapplication.utils.JSONField;
-import com.android.myapplication.utils.KeyMap;
+import com.android.vkplayer.api.APICallHelper;
+import com.android.vkplayer.entity.Song;
+import com.android.vkplayer.service.DownloadService;
+import com.android.vkplayer.service.PlayerService;
+import com.android.vkplayer.utils.JSONField;
+import com.android.vkplayer.utils.KeyMap;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -37,9 +37,10 @@ public class MainActivity extends Activity implements APICallHelper.APIListener 
     private String accessToken;
     private ListView mListview;
     private MusicAdapter mAdapter;
-    private PlayerService mService;
+    private PlayerService mPlayerService;
     private DownloadService mDownloadService;
     private PlayerReciever mReciever;
+    private String mPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +53,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener 
         Bundle bundle = getIntent().getExtras();
         accessToken = bundle.getString(KeyMap.ACCESS_TOKEN);
 
+        mPath = getExternalCacheDir().getPath()+"/";
         APICallHelper helper = APICallHelper.getInstance();
         helper.attachListener(this);
         helper.getMusicList("https://api.vk.com/method/audio.get?access_token=" + accessToken + "&count=100&offset=0&need_user=0");
@@ -107,15 +109,15 @@ public class MainActivity extends Activity implements APICallHelper.APIListener 
                 mDownloadService.downloadFile(url);
 
 
-                if (mService == null || mService.getUrl() == null) {
-                    processStartService(url);
+                if (mPlayerService == null || mPlayerService.getUrl() == null) {
+                    processStartService(url, false);
                 }
                 // player is playing track
                 else {
-                    currentUrl = mService.getUrl();
+                    currentUrl = mPlayerService.getUrl();
                     unbindService(mPlayerConnection);
                     stopService(new Intent(MainActivity.this, PlayerService.class));
-                    mService = null;
+                    mPlayerService = null;
 
                     // same station being selected, then stop playback
                     if (currentUrl != null && currentUrl.equals(url)) {
@@ -124,30 +126,30 @@ public class MainActivity extends Activity implements APICallHelper.APIListener 
 
                     // another track selected
                     else {
-                        processStartService(url);
+                        processStartService(url, false);
                     }
                 }
             }
             else{
-
+                processStartService(url, true);
             }
         }
     };
 
     public boolean isFileOnDevice(String url) {
-        File file = new File(getExternalCacheDir().getPath() + "/" + url);
-        return file.exists() ? true : false;
+        File file = new File(mPath + url);
+        return file.exists();
 
     }
 
     private ServiceConnection mPlayerConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className,
                                        IBinder binder) {
-            mService = ((PlayerService.PlayerBinder) binder).getService();
+            mPlayerService = ((PlayerService.PlayerBinder) binder).getService();
         }
 
         public void onServiceDisconnected(ComponentName className) {
-            mService = null;
+            mPlayerService = null;
         }
     };
 
@@ -164,9 +166,12 @@ public class MainActivity extends Activity implements APICallHelper.APIListener 
         }
     };
 
-    private void processStartService(String url) {
+    private void processStartService(String url, boolean isFileOnDevice) {
         Intent intent = new Intent(this, PlayerService.class);
         intent.putExtra(KeyMap.URL, url);
+        if(isFileOnDevice){
+            intent.putExtra(KeyMap.FILE_PATH, mPath);
+        }
         intent.addCategory(url);
         startService(intent);
 

@@ -1,6 +1,6 @@
-package com.android.myapplication.entity;
+package com.android.vkplayer.entity;
 
-import com.android.myapplication.utils.JSONField;
+import com.android.vkplayer.utils.JSONField;
 
 import org.json.JSONException;
 import org.json.JSONObject;
