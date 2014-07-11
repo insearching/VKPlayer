@@ -30,9 +30,47 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_alignParentEnd="true"
-        android:background="@color/blue">
+        android:background="@color/blue"
+        android:clickable="true"
+        android:onClick="@null">
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="marquee"
+            android:gravity="center_horizontal"
+            android:text="@string/app_name"
+            android:textColor="@color/white"
+            android:textSize="@dimen/default_text_size" />
+
+        <ImageView
+            android:id="@+id/playIv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            android:padding="@dimen/button_padding"
+            android:clickable="true"
+            android:src="@drawable/play" />
+
+        <ImageView
+            android:id="@+id/prevIv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_toLeftOf="@+id/playIv"
+            android:padding="@dimen/button_padding"
+            android:clickable="true"
+            android:src="@drawable/previous" />
+
+        <ImageView
+            android:id="@+id/nextIv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_toRightOf="@+id/playIv"
+            android:padding="@dimen/button_padding"
+            android:clickable="true"
+            android:src="@drawable/next" />
     </RelativeLayout>
-
-
 </RelativeLayout>
