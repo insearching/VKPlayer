@@ -8,5 +8,6 @@ public class KeyMap {
     public static final java.lang.String URL = "url";
     public static final String PLAYING = "playing";
     public static final String ACTION_PLAYER = "action_player";
-    public static final java.lang.String FILE_PATH = "file_path";
+    public static final String FILE_PATH = "file_path";
+    public static final java.lang.String AUDIO_ID = "id";
 }

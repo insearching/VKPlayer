@@ -16,6 +16,7 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.vkplayer.api.APICallHelper;
 import com.android.vkplayer.entity.Song;
@@ -31,7 +32,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.util.ArrayList;
 
-public class MainActivity extends Activity implements APICallHelper.APIListener {
+public class MainActivity extends Activity implements APICallHelper.APIListener, PlayerService.SongStatusListener {
 
     private static final String TAG = "TAG";
     private String accessToken;
@@ -53,7 +54,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener 
         Bundle bundle = getIntent().getExtras();
         accessToken = bundle.getString(KeyMap.ACCESS_TOKEN);
 
-        mPath = getExternalCacheDir().getPath()+"/";
+        mPath = getExternalCacheDir().getPath() + "/";
         APICallHelper helper = APICallHelper.getInstance();
         helper.attachListener(this);
         helper.getMusicList("https://api.vk.com/method/audio.get?access_token=" + accessToken + "&count=100&offset=0&need_user=0");
@@ -100,38 +101,35 @@ public class MainActivity extends Activity implements APICallHelper.APIListener 
     }
 
     private String currentUrl = null;
-    private AdapterView.OnItemClickListener onSongClickListener = new AdapterView.OnItemClickListener(){
+    private AdapterView.OnItemClickListener onSongClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
             String url = mAdapter.getItem(position).getUrl();
+            String audioId = mAdapter.getItem(position).getAid();
+            boolean isOnDevice = isFileOnDevice(audioId);
+            String path = isOnDevice ? mPath + audioId : url;
 
-            if(!isFileOnDevice(url)){
-                mDownloadService.downloadFile(url);
-
-
-                if (mPlayerService == null || mPlayerService.getUrl() == null) {
-                    processStartService(url, false);
-                }
-                // player is playing track
-                else {
-                    currentUrl = mPlayerService.getUrl();
-                    unbindService(mPlayerConnection);
-                    stopService(new Intent(MainActivity.this, PlayerService.class));
-                    mPlayerService = null;
-
-                    // same station being selected, then stop playback
-                    if (currentUrl != null && currentUrl.equals(url)) {
-                        currentUrl = null;
-                    }
-
-                    // another track selected
-                    else {
-                        processStartService(url, false);
-                    }
-                }
+            if (!isOnDevice) {
+                mDownloadService.downloadFile(url, audioId);
             }
-            else{
-                processStartService(url, true);
+
+            if (mPlayerService == null) {
+                processStartService(path, audioId, isOnDevice);
+            } else {
+                currentUrl = mPlayerService.getUrl();
+                unbindService(mPlayerConnection);
+                stopService(new Intent(MainActivity.this, PlayerService.class));
+                mPlayerService = null;
+
+                // same track selected, then stop playback
+                if (currentUrl != null && currentUrl.equals(path)) {
+                    currentUrl = null;
+                }
+
+                // another track selected
+                else {
+                    processStartService(path, audioId, isOnDevice);
+                }
             }
         }
     };
@@ -146,6 +144,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener 
         public void onServiceConnected(ComponentName className,
                                        IBinder binder) {
             mPlayerService = ((PlayerService.PlayerBinder) binder).getService();
+            mPlayerService.attachListener(MainActivity.this);
         }
 
         public void onServiceDisconnected(ComponentName className) {
@@ -166,16 +165,22 @@ public class MainActivity extends Activity implements APICallHelper.APIListener 
         }
     };
 
-    private void processStartService(String url, boolean isFileOnDevice) {
+    private void processStartService(String filePath, String audioId, boolean isFileOnDevice) {
         Intent intent = new Intent(this, PlayerService.class);
-        intent.putExtra(KeyMap.URL, url);
-        if(isFileOnDevice){
-            intent.putExtra(KeyMap.FILE_PATH, mPath);
+        if (isFileOnDevice) {
+            intent.putExtra(KeyMap.FILE_PATH, filePath);
+        } else {
+            intent.putExtra(KeyMap.URL, filePath);
         }
-        intent.addCategory(url);
+        intent.putExtra(KeyMap.AUDIO_ID, audioId);
         startService(intent);
-
         bindService(intent, mPlayerConnection, BIND_AUTO_CREATE);
+
+    }
+
+    @Override
+    public void OnSongLoaded(String url) {
+        Toast.makeText(this, url + " is playing", Toast.LENGTH_LONG).show();
     }
 
     class MusicAdapter extends BaseAdapter {

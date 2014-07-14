@@ -1,6 +1,7 @@
 package com.android.vkplayer.service;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
@@ -14,13 +15,14 @@ import java.io.IOException;
 
 public class PlayerService extends Service {
     private MediaPlayer player;
-    private String mUrl = null;
-    private String path = null;
     private boolean isRunning;
+    private boolean isOnDevice;
     private PlayerTask task;
-
-
+    private String filePath;
+    private String audioId;
+    private SongStatusListener callback;
     private final IBinder mBinder = new PlayerBinder();
+
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -28,7 +30,10 @@ public class PlayerService extends Service {
     }
 
     public String getUrl() {
-        return mUrl;
+        return filePath;
+    }
+    public String getAudioId() {
+        return audioId;
     }
 
     public class PlayerBinder extends Binder {
@@ -51,14 +56,26 @@ public class PlayerService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Bundle extras = intent.getExtras();
-        mUrl = extras.getString(KeyMap.URL);
-        if(extras.containsKey(KeyMap.FILE_PATH))
-            path = extras.getString(KeyMap.FILE_PATH);
+        String path = null;
+        String url = null;
+        if(extras.containsKey(KeyMap.FILE_PATH)) {
+            filePath = path = extras.getString(KeyMap.FILE_PATH);
+            audioId = extras.getString(KeyMap.AUDIO_ID);
+            isOnDevice = true;
+        }
+
+        if(extras.containsKey(KeyMap.URL)){
+            filePath = url = extras.getString(KeyMap.URL);
+            isOnDevice = false;
+        }
 
         if (!isRunning) {
             isRunning = true;
             task = new PlayerTask();
-            task.execute();
+            if(isOnDevice)
+                task.execute(path);
+            else
+                task.execute(url);
         }
 
         return START_NOT_STICKY;
@@ -75,34 +92,41 @@ public class PlayerService extends Service {
         }
     }
 
-    class PlayerTask extends AsyncTask<String, Void, Void> {
+    class PlayerTask extends AsyncTask<String, Void, String> {
         @Override
-        protected Void doInBackground(String... params) {
+        protected String doInBackground(String... params) {
             try {
                 player = new MediaPlayer();
-                if(path != null)
-                    player.setDataSource(path + mUrl);
-                else
-                    player.setDataSource(mUrl);
+                player.setDataSource(params[0]);
                 player.prepare();
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            return null;
+            return params[0];
         }
 
         @Override
-        protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+
+            callback.OnSongLoaded(result);
 
             player.start();
             Intent intent = new Intent();
             intent.setAction(KeyMap.ACTION_PLAYER);
 
             intent.putExtra(KeyMap.PLAYING, true);
-            intent.putExtra(KeyMap.URL, mUrl);
+            intent.putExtra(KeyMap.URL, result);
             sendBroadcast(intent);
         }
+    }
+
+    public void attachListener(Context context){
+        callback = (SongStatusListener) context;
+    }
+
+    public interface SongStatusListener {
+        public void OnSongLoaded(String url);
     }
 }

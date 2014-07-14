@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
+import android.util.Log;
 import android.webkit.DownloadListener;
 
 import java.io.File;
@@ -14,6 +15,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.Executors;
 
 public class DownloadService extends Service {
     private static final String TAG = "DOWANLOAD SERVICE";
@@ -47,8 +49,8 @@ public class DownloadService extends Service {
     }
 
 
-    public void downloadFile(String trackUrl){
-        new DownloadFileTask(startId).execute(trackUrl);
+    public void downloadFile(String url, String hash){
+        new DownloadFileTask(startId).executeOnExecutor(Executors.newFixedThreadPool(2), url, hash);
     }
     /**
      * Downloads file from service
@@ -97,7 +99,7 @@ public class DownloadService extends Service {
 
                 // download the file
                 input = connection.getInputStream();
-                output = new FileOutputStream(createFile(getExternalCacheDir().getPath(), param[0]));
+                output = new FileOutputStream(createFile(getExternalCacheDir().getPath(), param[1]));
 
                 byte data[] = new byte[4096];
                 long total = 0;
@@ -123,7 +125,7 @@ public class DownloadService extends Service {
                 if (connection != null)
                     connection.disconnect();
             }
-            return null;
+            return param[0];
         }
 
         @Override
@@ -141,6 +143,7 @@ public class DownloadService extends Service {
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
+            Log.d("TAG", "Downloaded " + result);
 
 //            if (callback != null)
 //                callback.onDownloadCompleted(Integer.parseInt(position), fileName, result);

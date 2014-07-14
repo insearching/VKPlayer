@@ -16,7 +16,7 @@ public class Song {
     private String title;
     private int duration;
     private String url;
-    private String lyrics_id = null;
+    private String lyricsId = null;
     private String genre;
 
     public Song(JSONObject song){
@@ -28,8 +28,9 @@ public class Song {
             duration = song.getInt(JSONField.DURATION);
             url = song.getString(JSONField.URL);
             if(song.has(JSONField.LYRICS_ID))
-                lyrics_id = song.getString(JSONField.LYRICS_ID);
-            genre = song.getString(JSONField.GENRE);
+                lyricsId = song.getString(JSONField.LYRICS_ID);
+            if(song.has(JSONField.GENRE))
+                genre = song.getString(JSONField.GENRE);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -59,8 +60,8 @@ public class Song {
         return url;
     }
 
-    public String getLyrics_id() {
-        return lyrics_id;
+    public String getLyricsId() {
+        return lyricsId;
     }
 
     public String getGenre() {
