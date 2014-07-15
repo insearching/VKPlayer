@@ -24,53 +24,67 @@
         android:layout_centerInParent="true"
         android:visibility="invisible" />
 
-    <RelativeLayout
-        android:layout_width="fill_parent"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="@dimen/bottom_panel_height"
+        android:orientation="vertical"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_alignParentEnd="true"
         android:background="@color/blue"
         android:clickable="true"
-        android:onClick="@null">
+        android:onClick="@null"
+        android:weightSum="2">
 
         <TextView
+            android:id="@+id/titleTv"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:ellipsize="marquee"
-            android:gravity="center_horizontal"
+            android:gravity="center"
+            android:layout_centerHorizontal="true"
+            android:padding="7dp"
             android:text="@string/app_name"
             android:textColor="@color/white"
             android:textSize="@dimen/default_text_size" />
 
-        <ImageView
-            android:id="@+id/playIv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
-            android:layout_alignParentBottom="true"
-            android:padding="@dimen/button_padding"
-            android:clickable="true"
-            android:src="@drawable/play" />
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_below="@id/titleTv"
+            android:layout_centerHorizontal="true">
 
-        <ImageView
-            android:id="@+id/prevIv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_toLeftOf="@+id/playIv"
-            android:padding="@dimen/button_padding"
-            android:clickable="true"
-            android:src="@drawable/previous" />
+            <ImageView
+                android:id="@+id/playPauseIv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:layout_alignParentBottom="true"
+                android:padding="@dimen/button_padding"
+                android:clickable="true"
+                android:src="@drawable/play" />
 
-        <ImageView
-            android:id="@+id/nextIv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_toRightOf="@+id/playIv"
-            android:padding="@dimen/button_padding"
-            android:clickable="true"
-            android:src="@drawable/next" />
-    </RelativeLayout>
+            <ImageView
+                android:id="@+id/prevIv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_toLeftOf="@+id/playPauseIv"
+                android:padding="@dimen/button_padding"
+                android:clickable="true"
+                android:src="@drawable/previous" />
+
+            <ImageView
+                android:id="@+id/nextIv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_toRightOf="@+id/playPauseIv"
+                android:padding="@dimen/button_padding"
+                android:clickable="true"
+                android:src="@drawable/next" />
+        </RelativeLayout>
+    </LinearLayout>
 </RelativeLayout>

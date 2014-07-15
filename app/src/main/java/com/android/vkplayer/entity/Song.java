@@ -1,9 +1,12 @@
 package com.android.vkplayer.entity;
 
+import android.text.Html;
+
 import com.android.vkplayer.utils.JSONField;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
 
 /**
  * Created by insearching on 08.07.2014.
@@ -19,12 +22,14 @@ public class Song {
     private String lyricsId = null;
     private String genre;
 
+    private TrackStatus status = null;
+
     public Song(JSONObject song){
         try {
             aid = song.getString(JSONField.AID);
             ownerId = song.getString(JSONField.OWNER_ID);
-            artist = song.getString(JSONField.ARTIST);
-            title = song.getString(JSONField.TITLE);
+            artist = Html.fromHtml(song.getString(JSONField.ARTIST)).toString();
+            title = Html.fromHtml(song.getString(JSONField.TITLE)).toString();
             duration = song.getInt(JSONField.DURATION);
             url = song.getString(JSONField.URL);
             if(song.has(JSONField.LYRICS_ID))
@@ -34,6 +39,8 @@ public class Song {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+
+        status = new TrackStatus(false, 0);
     }
 
     public String getAid() {
@@ -68,4 +75,11 @@ public class Song {
         return genre;
     }
 
+    public void setTrackStatus(boolean isDownloaded, int progress) {
+        status = new TrackStatus(isDownloaded, progress);
+    }
+
+    public TrackStatus getTrackStatus(){
+        return status;
+    }
 }

@@ -14,12 +14,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.android.vkplayer.api.APICallHelper;
 import com.android.vkplayer.entity.Song;
+import com.android.vkplayer.entity.TrackStatus;
 import com.android.vkplayer.service.DownloadService;
 import com.android.vkplayer.service.PlayerService;
 import com.android.vkplayer.utils.JSONField;
@@ -32,16 +35,22 @@ import org.json.JSONObject;
 import java.io.File;
 import java.util.ArrayList;
 
-public class MainActivity extends Activity implements APICallHelper.APIListener, PlayerService.SongStatusListener {
+public class MainActivity extends Activity implements APICallHelper.APIListener, PlayerService.SongStatusListener, DownloadService.DownloadListener {
 
     private static final String TAG = "TAG";
     private String accessToken;
     private ListView mListview;
+    private TextView titleTv;
+    private ImageView playPauseIv;
+    private ImageView prevIv;
+    private ImageView nextIv;
+
     private MusicAdapter mAdapter;
     private PlayerService mPlayerService;
     private DownloadService mDownloadService;
     private PlayerReciever mReciever;
     private String mPath;
+    private ArrayList<String> downloadings = new ArrayList<String>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +59,11 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
 
         mListview = (ListView) findViewById(R.id.listView);
         mListview.setOnItemClickListener(onSongClickListener);
+
+        titleTv = (TextView) findViewById(R.id.titleTv);
+        playPauseIv = (ImageView) findViewById(R.id.playPauseIv);
+        prevIv = (ImageView) findViewById(R.id.prevIv);
+        nextIv = (ImageView) findViewById(R.id.nextIv);
 
         Bundle bundle = getIntent().getExtras();
         accessToken = bundle.getString(KeyMap.ACCESS_TOKEN);
@@ -90,7 +104,9 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         try {
             JSONArray array = json.getJSONArray(JSONField.RESPONSE);
             for (int i = 0; i < array.length(); i++) {
-                songs.add(new Song(array.getJSONObject(i)));
+                Song song = new Song(array.getJSONObject(i));
+                song.setTrackStatus(isFileOnDevice(song.getAid()), 0);
+                songs.add(song);
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -104,14 +120,18 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
     private AdapterView.OnItemClickListener onSongClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            String url = mAdapter.getItem(position).getUrl();
-            String audioId = mAdapter.getItem(position).getAid();
+            Song song = mAdapter.getItem(position);
+            String url = song.getUrl();
+            String audioId = song.getAid();
+            titleTv.setText(song.getArtist() + " — " + song.getTitle());
+
             boolean isOnDevice = isFileOnDevice(audioId);
             String path = isOnDevice ? mPath + audioId : url;
 
             if (!isOnDevice) {
                 mDownloadService.downloadFile(url, audioId);
             }
+
 
             if (mPlayerService == null) {
                 processStartService(path, audioId, isOnDevice);
@@ -134,8 +154,8 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         }
     };
 
-    public boolean isFileOnDevice(String url) {
-        File file = new File(mPath + url);
+    public boolean isFileOnDevice(String id) {
+        File file = new File(mPath + id);
         return file.exists();
 
     }
@@ -156,7 +176,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
             mDownloadService = ((DownloadService.FileDownloadBinder) binder).getService();
-
+            mDownloadService.attachListener(MainActivity.this);
         }
 
         @Override
@@ -180,7 +200,23 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
 
     @Override
     public void OnSongLoaded(String url) {
-        Toast.makeText(this, url + " is playing", Toast.LENGTH_LONG).show();
+//        Toast.makeText(this, url + " is playing", Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onProgressChanged(String aid, int progress) {
+        int position = -1;
+        for(int i=0; i<mAdapter.getCount(); i++){
+            if(mAdapter.getItem(i).getAid().equals(aid))
+                position = i;
+        }
+
+        if (position != -1) {
+            downloadings.add(aid);
+            mAdapter.getItem(position).setTrackStatus(progress == 100, progress);
+            mAdapter.notifyDataSetChanged();
+        }
+
     }
 
     class MusicAdapter extends BaseAdapter {
@@ -212,23 +248,45 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder holder = new ViewHolder();
             if (convertView == null) {
-                convertView = inflater.inflate(R.layout.row_song, parent, false);
-                holder.labelTv = (TextView) convertView.findViewById(R.id.songTv);
+                convertView = inflater.inflate(R.layout.row_track, parent, false);
+                holder.labelTv = (TextView) convertView.findViewById(R.id.titleTv);
                 holder.durationTv = (TextView) convertView.findViewById(R.id.durationTv);
+                holder.downloadPb = (ProgressBar) convertView.findViewById(R.id.downloadPb);
+                holder.downloadStatusCb = (CheckBox) convertView.findViewById(R.id.downloadStatusCb);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
             }
 
-            Song song = data.get(position);
+            Song song = getItem(position);
             holder.labelTv.setText(song.getArtist() + " - " + song.getTitle());
             holder.durationTv.setText(song.getDuration() / 60 + ":" + (song.getDuration() % 60 <= 9 ? 0 + "" + song.getDuration() % 60 : song.getDuration() % 60));
+
+            TrackStatus status = song.getTrackStatus();
+            holder.downloadStatusCb.setChecked(status.isDownloaded());
+
+
+            if(song.getTrackStatus().getProgress() > 0) {
+                holder.downloadPb.setVisibility(View.VISIBLE);
+                holder.downloadPb.setProgress(status.getProgress());
+            }
+
+            boolean isDownloading = false;
+            for(String aid : downloadings){
+                if(aid.equals(song.getAid()))
+                    isDownloading = true;
+            }
+            if(!isDownloading || song.getTrackStatus().getProgress() == 100)
+                holder.downloadPb.setVisibility(View.INVISIBLE);
+
             return convertView;
         }
 
         class ViewHolder {
             TextView labelTv;
             TextView durationTv;
+            ProgressBar downloadPb;
+            CheckBox downloadStatusCb;
         }
     }
 

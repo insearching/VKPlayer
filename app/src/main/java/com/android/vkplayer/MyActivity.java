@@ -91,8 +91,8 @@ public class MyActivity extends Activity {
         public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder holder = new ViewHolder();
             if (convertView == null) {
-                convertView = inflater.inflate(R.layout.row_song, parent, false);
-                holder.labelTv = (TextView) convertView.findViewById(R.id.songTv);
+                convertView = inflater.inflate(R.layout.row_track, parent, false);
+                holder.labelTv = (TextView) convertView.findViewById(R.id.titleTv);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();

@@ -1,12 +1,12 @@
 package com.android.vkplayer.service;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
-import android.webkit.DownloadListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -49,30 +49,27 @@ public class DownloadService extends Service {
     }
 
 
-    public void downloadFile(String url, String hash){
-        new DownloadFileTask(startId).executeOnExecutor(Executors.newFixedThreadPool(2), url, hash);
+    public void downloadFile(String url, String aid){
+        new DownloadFileTask(startId, aid).executeOnExecutor(Executors.newFixedThreadPool(2), url);
     }
     /**
      * Downloads file from service
      * param[0] - request URL
      * param[1] - accessToken
-     * param[2] - id of file to download
-     * param[3] - name of file to download
-     * param[4] - position of file
      */
     class DownloadFileTask extends AsyncTask<String, Integer, String> {
         int startId;
+        String aid;
 
-        public DownloadFileTask(int startId) {
+        public DownloadFileTask(int startId, String aid) {
             this.startId = startId;
+            this.aid = aid;
         }
 
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
             mProgress = 0;
-//            if (callback != null)
-//                callback.onDownloadStarted(fileName);
         }
 
         @Override
@@ -99,7 +96,7 @@ public class DownloadService extends Service {
 
                 // download the file
                 input = connection.getInputStream();
-                output = new FileOutputStream(createFile(getExternalCacheDir().getPath(), param[1]));
+                output = new FileOutputStream(createFile(getExternalCacheDir().getPath(), aid));
 
                 byte data[] = new byte[4096];
                 long total = 0;
@@ -133,6 +130,7 @@ public class DownloadService extends Service {
             super.onProgressUpdate(progress);
             if ((progress[0] % 5) == 0 && mProgress != progress[0]) {
                 mProgress = progress[0];
+                callback.onProgressChanged(aid, mProgress);
 //                BoxHelper.updateDownloadNotification(mContext, fileName, getString(R.string.downloading), mProgress, android.R.drawable.stat_sys_download, false);
 //                if (callback != null) {
 //                    callback.onProgressChanged(mProgress, fileName, getString(R.string.downloading));
@@ -177,6 +175,16 @@ public class DownloadService extends Service {
             return null;
         }
         return file;
+    }
+
+    public void attachListener (Context context) {
+        callback = (DownloadListener) context;
+    }
+
+    public interface DownloadListener {
+
+        public void onProgressChanged(String aid, int progress);
+
     }
 
 }
