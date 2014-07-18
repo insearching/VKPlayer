@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -62,13 +63,23 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
 
         titleTv = (TextView) findViewById(R.id.titleTv);
         playPauseIv = (ImageView) findViewById(R.id.playPauseIv);
+        playPauseIv.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean isPlaying = mPlayerService.isPlaying();
+                if (isPlaying)
+                    playPauseIv.setImageResource(R.drawable.pause);
+                else
+                    playPauseIv.setImageResource(R.drawable.play);
+            }
+        });
         prevIv = (ImageView) findViewById(R.id.prevIv);
         nextIv = (ImageView) findViewById(R.id.nextIv);
 
         Bundle bundle = getIntent().getExtras();
         accessToken = bundle.getString(KeyMap.ACCESS_TOKEN);
-
         mPath = getExternalCacheDir().getPath() + "/";
+
         APICallHelper helper = APICallHelper.getInstance();
         helper.attachListener(this);
         helper.getMusicList("https://api.vk.com/method/audio.get?access_token=" + accessToken + "&count=100&offset=0&need_user=0");
@@ -86,8 +97,8 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         registerReceiver(mReciever, intentFilter);
 
         Intent intent = new Intent(this, PlayerService.class);
-        bindService(intent, mPlayerConnection,
-                BIND_AUTO_CREATE);
+        startService(intent);
+        bindService(intent, mPlayerConnection, BIND_AUTO_CREATE);
     }
 
     @Override
@@ -113,10 +124,9 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         }
         mAdapter = new MusicAdapter(MainActivity.this, songs);
         mListview.setAdapter(mAdapter);
-
     }
 
-    private String currentUrl = null;
+
     private AdapterView.OnItemClickListener onSongClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -128,34 +138,42 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             boolean isOnDevice = isFileOnDevice(audioId);
             String path = isOnDevice ? mPath + audioId : url;
 
-            if (!isOnDevice) {
+            if (!isOnDevice && !isFileDownloading(audioId)) {
                 mDownloadService.downloadFile(url, audioId);
             }
 
-
-            if (mPlayerService == null) {
-                processStartService(path, audioId, isOnDevice);
+            String currentPath = mPlayerService.getPath();
+            if (mPlayerService.isPlaying()) {
+                mPlayerService.playPause();
+                if (!currentPath.equals(url) && !currentPath.equals(mPath + audioId)) {
+                    mPlayerService.setDataSource(path, isOnDevice);
+                }
+            } else if (!mPlayerService.isPlaying()) {
+                if (currentPath != null) {
+                    if (!currentPath.equals(url) && !currentPath.equals(mPath + audioId))
+                        mPlayerService.setDataSource(path, isOnDevice);
+                } else {
+                    mPlayerService.setDataSource(path, isOnDevice);
+                }
+                mPlayerService.playPause();
             } else {
-                currentUrl = mPlayerService.getUrl();
-                unbindService(mPlayerConnection);
-                stopService(new Intent(MainActivity.this, PlayerService.class));
-                mPlayerService = null;
-
-                // same track selected, then stop playback
-                if (currentUrl != null && currentUrl.equals(path)) {
-                    currentUrl = null;
-                }
-
-                // another track selected
-                else {
-                    processStartService(path, audioId, isOnDevice);
-                }
+                mPlayerService.setDataSource(path, isOnDevice);
+                mPlayerService.playPause();
             }
         }
     };
 
-    public boolean isFileOnDevice(String id) {
-        File file = new File(mPath + id);
+    private boolean isFileDownloading(String aid) {
+        for (String _aid : downloadings) {
+            if (_aid.equals(aid)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isFileOnDevice(String aid) {
+        File file = new File(mPath + aid);
         return file.exists();
 
     }
@@ -204,10 +222,20 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
     }
 
     @Override
+    public void OnSongFinished(String url) {
+
+    }
+
+    @Override
+    public void OnPlaybackStatusChanged(String url, int time) {
+        Log.d(url, "" + time);
+    }
+
+    @Override
     public void onProgressChanged(String aid, int progress) {
         int position = -1;
-        for(int i=0; i<mAdapter.getCount(); i++){
-            if(mAdapter.getItem(i).getAid().equals(aid))
+        for (int i = 0; i < mAdapter.getCount(); i++) {
+            if (mAdapter.getItem(i).getAid().equals(aid))
                 position = i;
         }
 
@@ -266,17 +294,17 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             holder.downloadStatusCb.setChecked(status.isDownloaded());
 
 
-            if(song.getTrackStatus().getProgress() > 0) {
+            if (song.getTrackStatus().getProgress() > 0) {
                 holder.downloadPb.setVisibility(View.VISIBLE);
                 holder.downloadPb.setProgress(status.getProgress());
             }
 
             boolean isDownloading = false;
-            for(String aid : downloadings){
-                if(aid.equals(song.getAid()))
+            for (String aid : downloadings) {
+                if (aid.equals(song.getAid()))
                     isDownloading = true;
             }
-            if(!isDownloading || song.getTrackStatus().getProgress() == 100)
+            if (!isDownloading || song.getTrackStatus().getProgress() == 100)
                 holder.downloadPb.setVisibility(View.INVISIBLE);
 
             return convertView;

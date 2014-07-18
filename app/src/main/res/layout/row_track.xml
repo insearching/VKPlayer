@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-
+    <!--android:layout_height="?android:attr/listPreferredItemHeight"-->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="?android:attr/listPreferredItemHeight">
+    android:layout_height="60dp">
 
     <RelativeLayout
         android:id="@+id/trackRl"
@@ -45,6 +45,7 @@
         android:layout_width="match_parent"
         android:layout_height="20dp"
         android:layout_below="@+id/trackRl"
+        android:layout_marginBottom="5dp"
         android:visibility="invisible" />
 
 
