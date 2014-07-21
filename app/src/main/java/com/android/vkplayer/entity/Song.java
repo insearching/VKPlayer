@@ -23,6 +23,7 @@ public class Song {
     private String genre;
 
     private TrackStatus status = null;
+    private PlayBackStatus playbackStatus;
 
     public Song(JSONObject song){
         try {
@@ -75,11 +76,20 @@ public class Song {
         return genre;
     }
 
+
     public void setTrackStatus(boolean isDownloaded, int progress) {
         status = new TrackStatus(isDownloaded, progress);
     }
 
     public TrackStatus getTrackStatus(){
         return status;
+    }
+
+    public void setPlayBackStatus(int progress, int duration) {
+        playbackStatus = new PlayBackStatus(progress, duration);
+    }
+
+    public PlayBackStatus getPlayBackStatus(){
+        return playbackStatus;
     }
 }

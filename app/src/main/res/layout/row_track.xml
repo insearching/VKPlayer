@@ -2,18 +2,25 @@
     <!--android:layout_height="?android:attr/listPreferredItemHeight"-->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="60dp">
+    android:layout_height="75dp">
 
     <RelativeLayout
         android:id="@+id/trackRl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
+
         <TextView
             android:id="@+id/titleTv"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
+            android:gravity="center_vertical"
+            android:ellipsize="marquee"
+            android:freezesText="true"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:lines="2"
+            android:scrollHorizontally="true"
             android:layout_alignParentLeft="true"
             android:layout_toLeftOf="@+id/downloadStatusCb"
             android:text="@string/app_name" />
@@ -39,11 +46,10 @@
             android:text="@string/app_name" />
     </RelativeLayout>
 
-    <ProgressBar
-        android:id="@+id/downloadPb"
-        style="?android:attr/progressBarStyleHorizontal"
+    <SeekBar
+        android:id="@+id/playbackPb"
         android:layout_width="match_parent"
-        android:layout_height="20dp"
+        android:layout_height="wrap_content"
         android:layout_below="@+id/trackRl"
         android:layout_marginBottom="5dp"
         android:visibility="invisible" />

@@ -83,15 +83,11 @@ public class DownloadService extends Service {
                 connection = (HttpURLConnection) url.openConnection();
                 connection.connect();
 
-                // expect HTTP 200 OK, so we don't mistakenly save error report
-                // instead of the file
                 if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                     return "Server returned HTTP " + connection.getResponseCode()
                             + " " + connection.getResponseMessage();
                 }
 
-                // this will be useful to display download percentage
-                // might be -1: server did not report the length
                 int fileLength = connection.getContentLength();
 
                 // download the file
@@ -143,8 +139,8 @@ public class DownloadService extends Service {
             super.onPostExecute(result);
             Log.d("TAG", "Downloaded " + result);
 
-//            if (callback != null)
-//                callback.onDownloadCompleted(Integer.parseInt(position), fileName, result);
+            if (callback != null)
+                callback.onDownloadCompleted(aid);
 //            if (result != null && result == HttpURLConnection.HTTP_OK) {
 //                BoxHelper.showNotification(mContext, fileName, getString(R.string.download_completed), path, android.R.drawable.stat_sys_download_done);
 //
@@ -184,6 +180,7 @@ public class DownloadService extends Service {
     public interface DownloadListener {
 
         public void onProgressChanged(String aid, int progress);
+        public void onDownloadCompleted(String aid);
 
     }
 

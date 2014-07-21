@@ -47,6 +47,7 @@
             android:padding="5dp"/>
 
         <RelativeLayout
+            android:id="@+id/controlPanel"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"

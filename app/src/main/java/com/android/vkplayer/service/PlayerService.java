@@ -8,7 +8,6 @@ import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-import android.util.Log;
 
 import com.android.vkplayer.utils.KeyMap;
 
@@ -16,13 +15,13 @@ import java.io.IOException;
 
 public class PlayerService extends Service {
     private MediaPlayer player;
-    private boolean isRunning;
-    private boolean isOnDevice;
     private String path;
     private PlayerTask task;
     private SongStatusListener callback;
     private final IBinder mBinder = new PlayerBinder();
     private boolean isBinded;
+    private String url;
+    private String aid;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -40,8 +39,12 @@ public class PlayerService extends Service {
         return path;
     }
 
-    public boolean isBinded() {
-        return isBinded;
+    public String getAid() {
+        return aid;
+    }
+
+    public void goToPosition(int seconds) {
+        player.seekTo(seconds * 1000);
     }
 
     public boolean isPlaying() {
@@ -53,6 +56,7 @@ public class PlayerService extends Service {
     public void playPause() {
         if (player == null)
             return;
+
         if (player.isPlaying()) {
             player.pause();
         } else {
@@ -60,8 +64,11 @@ public class PlayerService extends Service {
         }
     }
 
-    public void setDataSource(String path, boolean isOnDevice) {
+    public void setDataSource(String path, String url, String aid) {
         this.path = path;
+        this.url = url;
+        this.aid = aid;
+
         if (task != null)
             task.cancel(true);
         if (player != null) {
@@ -71,8 +78,8 @@ public class PlayerService extends Service {
         }
         task = new PlayerTask();
         task.execute(path);
-        this.isOnDevice = isOnDevice;
     }
+
 
     public class PlayerBinder extends Binder {
         public PlayerService getService() {
@@ -83,7 +90,6 @@ public class PlayerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        isRunning = false;
     }
 
     @Override
@@ -102,48 +108,33 @@ public class PlayerService extends Service {
         }
     }
 
-
     private Handler mHandler = new Handler();
-    private Runnable mRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (player != null) {
-                int mCurrentPosition = player.getCurrentPosition() / 1000;
-                Log.d("TAG", "" + mCurrentPosition);
-            }
-            mHandler.postDelayed(this, 1000);
-        }
-    };;
+    private Runnable mRunnable;
 
     class PlayerTask extends AsyncTask<String, Void, String> {
         @Override
-        protected String doInBackground(String... params) {
+        protected String doInBackground(final String... params) {
             try {
                 player = new MediaPlayer();
                 player.setDataSource(params[0]);
-                player.setOnBufferingUpdateListener(new MediaPlayer.OnBufferingUpdateListener() {
-                    @Override
-                    public void onBufferingUpdate(MediaPlayer mp, int percent) {
-                        Log.d("TAG", "" + percent);
-                    }
-                });
-
 
                 mRunnable = new Runnable() {
                     @Override
                     public void run() {
                         if (player != null) {
                             int mCurrentPosition = player.getCurrentPosition() / 1000;
-                            Log.d("TAG", "" + mCurrentPosition);
+                            if (mCurrentPosition > 0)
+                                callback.OnPlaybackStatusChanged(url, mCurrentPosition);
                         }
-                        mHandler.postDelayed(this, 1000);
+                        mHandler.postDelayed(this, 1100);
                     }
                 };
+
 
                 player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     @Override
                     public void onCompletion(MediaPlayer mp) {
-                        Log.d("TAG", "Song finished");
+                        callback.OnSongFinished(url);
                     }
                 });
                 player.prepare();
@@ -158,7 +149,7 @@ public class PlayerService extends Service {
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
 
-            callback.OnSongLoaded(result);
+            callback.OnSongLoaded(aid);
 
             player.start();
             mRunnable.run();
@@ -176,7 +167,7 @@ public class PlayerService extends Service {
     }
 
     public interface SongStatusListener {
-        public void OnSongLoaded(String url);
+        public void OnSongLoaded(String aid);
 
         public void OnSongFinished(String url);
 

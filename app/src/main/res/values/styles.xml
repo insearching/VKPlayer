@@ -2,7 +2,22 @@
 
     <!-- Base application theme. -->
     <style name="AppTheme" parent="android:Theme.Holo.Light.NoActionBar.Fullscreen">
-        <!-- Customize your theme here. -->
+        <item name="android:seekBarStyle">@style/SeekBarAppTheme</item>
+    </style>
+
+    <style name="SeekBarAppTheme" parent="android:Widget.SeekBar">
+        <item name="android:progressDrawable">
+            @drawable/apptheme_scrubber_progress_horizontal_holo_light
+        </item>
+        <item name="android:indeterminateDrawable">
+            @drawable/apptheme_scrubber_progress_horizontal_holo_light
+        </item>
+        <item name="android:minHeight">5dip</item>
+        <item name="android:maxHeight">5dip</item>
+        <item name="android:thumb">@drawable/thumb_image</item>
+        <item name="android:thumbOffset">16dip</item>
+        <item name="android:paddingLeft">16dip</item>
+        <item name="android:paddingRight">16dip</item>
     </style>
 
 </resources>
