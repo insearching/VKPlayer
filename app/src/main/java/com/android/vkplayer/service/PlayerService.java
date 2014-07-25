@@ -19,19 +19,16 @@ public class PlayerService extends Service {
     private PlayerTask task;
     private SongStatusListener callback;
     private final IBinder mBinder = new PlayerBinder();
-    private boolean isBinded;
     private String url;
     private String aid;
 
     @Override
     public IBinder onBind(Intent intent) {
-        isBinded = true;
         return mBinder;
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
-        isBinded = false;
         return true;
     }
 
