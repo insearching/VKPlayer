@@ -1,5 +1,7 @@
 package com.android.vkplayer.entity;
 
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.text.Html;
 
 import com.android.vkplayer.utils.JSONField;
@@ -7,11 +9,7 @@ import com.android.vkplayer.utils.JSONField;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-
-/**
- * Created by insearching on 08.07.2014.
- */
-public class Song {
+public class Track implements Parcelable {
 
     private String aid;
     private String ownerId;
@@ -25,7 +23,7 @@ public class Song {
     private TrackStatus status = null;
     private PlayBackStatus playbackStatus;
 
-    public Song(JSONObject song){
+    public Track(JSONObject song){
         try {
             aid = song.getString(JSONField.AID);
             ownerId = song.getString(JSONField.OWNER_ID);
@@ -42,6 +40,13 @@ public class Song {
         }
 
         status = new TrackStatus(false, 0);
+    }
+
+    @Override
+    public boolean equals(Object _track) {
+        if(_track instanceof Track)
+            return this.aid.equals(((Track)_track).getAid());
+        return false;
     }
 
     public String getAid() {
@@ -92,4 +97,49 @@ public class Song {
     public PlayBackStatus getPlayBackStatus(){
         return playbackStatus;
     }
+
+    protected Track(Parcel in) {
+        aid = in.readString();
+        ownerId = in.readString();
+        artist = in.readString();
+        title = in.readString();
+        duration = in.readInt();
+        url = in.readString();
+        lyricsId = in.readString();
+        genre = in.readString();
+        status = (TrackStatus) in.readValue(TrackStatus.class.getClassLoader());
+        playbackStatus = (PlayBackStatus) in.readValue(PlayBackStatus.class.getClassLoader());
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(aid);
+        dest.writeString(ownerId);
+        dest.writeString(artist);
+        dest.writeString(title);
+        dest.writeInt(duration);
+        dest.writeString(url);
+        dest.writeString(lyricsId);
+        dest.writeString(genre);
+        dest.writeValue(status);
+        dest.writeValue(playbackStatus);
+    }
+
+    @SuppressWarnings("unused")
+    public static final Parcelable.Creator<Track> CREATOR = new Parcelable.Creator<Track>() {
+        @Override
+        public Track createFromParcel(Parcel in) {
+            return new Track(in);
+        }
+
+        @Override
+        public Track[] newArray(int size) {
+            return new Track[size];
+        }
+    };
 }

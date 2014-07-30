@@ -9,6 +9,8 @@ import android.os.IBinder;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,9 +51,10 @@ public class DownloadService extends Service {
     }
 
 
-    public void downloadFile(String url, String aid){
+    public void downloadFile(String url, String aid) {
         new DownloadFileTask(startId, aid).executeOnExecutor(Executors.newFixedThreadPool(2), url);
     }
+
     /**
      * Downloads file from service
      * param[0] - request URL
@@ -89,10 +92,10 @@ public class DownloadService extends Service {
                 }
 
                 int fileLength = connection.getContentLength();
-
+                File tempFile = createFile(getExternalCacheDir().getPath(), aid + "temp");
                 // download the file
                 input = connection.getInputStream();
-                output = new FileOutputStream(createFile(getExternalCacheDir().getPath(), aid));
+                output = new FileOutputStream(tempFile);
 
                 byte data[] = new byte[4096];
                 long total = 0;
@@ -104,6 +107,8 @@ public class DownloadService extends Service {
                         publishProgress((int) (total * 100 / fileLength));
                     output.write(data, 0, count);
                 }
+                moveFile(getExternalCacheDir().getPath()+"/", aid + "temp", aid);
+
             } catch (Exception e) {
                 return e.toString();
             } finally {
@@ -152,6 +157,34 @@ public class DownloadService extends Service {
         }
     }
 
+    private void moveFile(String path, String inputFile, String outputFile) {
+        try {
+            InputStream in = new FileInputStream(path + inputFile);
+            OutputStream out = new FileOutputStream(path + outputFile);
+
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            in.close();
+
+            // write the output file
+            out.flush();
+            out.close();
+
+            // delete the original file
+            new File(path  + inputFile).delete();
+
+
+        } catch (FileNotFoundException fnfe1) {
+            Log.e("tag", fnfe1.getMessage());
+        } catch (Exception e) {
+            Log.e("tag", e.getMessage());
+        }
+
+    }
+
     private File createFile(String path, String fileName) {
         String sFolder = path + "/";
         File file = new File(sFolder);
@@ -173,13 +206,14 @@ public class DownloadService extends Service {
         return file;
     }
 
-    public void attachListener (Context context) {
+    public void attachListener(Context context) {
         callback = (DownloadListener) context;
     }
 
     public interface DownloadListener {
 
         public void onProgressChanged(String aid, int progress);
+
         public void onDownloadCompleted(String aid);
 
     }

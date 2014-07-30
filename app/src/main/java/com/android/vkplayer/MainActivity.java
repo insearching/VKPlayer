@@ -15,21 +15,22 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
-import android.widget.CheckBox;
 import android.widget.ImageView;
-import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.android.vkplayer.api.APICallHelper;
 import com.android.vkplayer.entity.PlayBackStatus;
-import com.android.vkplayer.entity.Song;
+import com.android.vkplayer.entity.Track;
 import com.android.vkplayer.entity.TrackStatus;
 import com.android.vkplayer.service.DownloadService;
 import com.android.vkplayer.service.PlayerService;
 import com.android.vkplayer.utils.JSONField;
 import com.android.vkplayer.utils.KeyMap;
 import com.android.vkplayer.view.AutoResizeTextView;
+import com.android.vkplayer.view.LoadMoreListView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -41,29 +42,53 @@ import java.util.ArrayList;
 public class MainActivity extends Activity implements APICallHelper.APIListener, PlayerService.SongStatusListener, DownloadService.DownloadListener {
 
     private static final String TAG = "TAG";
+    private static final int TRACKS_COUNT = 100;
     private String accessToken;
-    private ListView mListview;
+    private LoadMoreListView mListview;
     private AutoResizeTextView titleTv;
     private ImageView playPauseIv;
     private ImageView prevIv;
     private ImageView nextIv;
+    private ProgressBar progressBar;
+    private RelativeLayout controlPanel;
 
     private MusicAdapter mAdapter;
     private PlayerService mPlayerService;
     private DownloadService mDownloadService;
     private PlayerReceiver mReciever;
     private String mPath;
-    private ArrayList<String> downloadingsList = new ArrayList<String>();
-    private ArrayList<String> playingList = new ArrayList<String>();
+    private String curTitle = "";
+    private ArrayList<Track> mTrackList = new ArrayList<Track>();
+    private ArrayList<String> downloadList = new ArrayList<String>();
+    private ArrayList<String> playList = new ArrayList<String>();
     private boolean isSeaking = false;
+    private int offset = 0;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mPath = getExternalCacheDir().getPath() + "/";
+        mListview = (LoadMoreListView) findViewById(R.id.listView);
+        mListview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                progressBar.setVisibility(View.VISIBLE);
+                controlPanel.setVisibility(View.INVISIBLE);
+                playBack(position);
+            }
+        });
 
-        mListview = (ListView) findViewById(R.id.listView);
-        mListview.setOnItemClickListener(onSongClickListener);
+        mListview.setOnLoadMoreListener(new LoadMoreListView.OnLoadMoreListener() {
+            @Override
+            public void onLoadMore() {
+                offset += 100;
+                loadMusicList();
+            }
+        });
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        controlPanel = (RelativeLayout) findViewById(R.id.controlPanel);
 
         titleTv = (AutoResizeTextView) findViewById(R.id.titleTv);
         playPauseIv = (ImageView) findViewById(R.id.playPauseIv);
@@ -81,10 +106,10 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
                 String aid = mPlayerService.getAid();
                 if (aid == null)
                     return;
-                Song song = findItemByAid(aid);
-                if (song == null)
+                Track track = findItemByAid(aid);
+                if (track == null)
                     return;
-                int position = mAdapter.getItemPosition(song);
+                int position = mAdapter.getItemPosition(track);
                 if (position != -1)
                     playBack(position - 1);
             }
@@ -96,29 +121,49 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
                 String aid = mPlayerService.getAid();
                 if (aid == null)
                     return;
-                Song song = findItemByAid(aid);
-                if (song == null)
+                Track track = findItemByAid(aid);
+                if (track == null)
                     return;
-                int position = mAdapter.getItemPosition(song);
+                int position = mAdapter.getItemPosition(track);
                 if (position != -1)
                     playBack(position + 1);
             }
         });
 
         Bundle bundle = getIntent().getExtras();
-        accessToken = bundle.getString(KeyMap.ACCESS_TOKEN);
-        mPath = getExternalCacheDir().getPath() + "/";
+        if (bundle != null) {
+            accessToken = bundle.getString(KeyMap.ACCESS_TOKEN);
+        }
 
-        APICallHelper helper = APICallHelper.getInstance();
-        helper.attachListener(this);
-        helper.getMusicList("https://api.vk.com/method/audio.get?access_token=" + accessToken + "&count=100&offset=0&need_user=0");
+        if (savedInstanceState != null) {
+            accessToken = savedInstanceState.getString(KeyMap.ACCESS_TOKEN);
+            mTrackList = savedInstanceState.getParcelableArrayList(KeyMap.TRACK_LIST);
+            mAdapter = new MusicAdapter(this, mTrackList);
+            mListview.setAdapter(mAdapter);
+            downloadList = savedInstanceState.getStringArrayList(KeyMap.DOWNLOAD_LIST);
+            playList = savedInstanceState.getStringArrayList(KeyMap.PLAY_LIST);
+            curTitle = savedInstanceState.getString(KeyMap.TITLE);
+
+        } else {
+            loadMusicList();
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putString(KeyMap.ACCESS_TOKEN, accessToken);
+        outState.putParcelableArrayList(KeyMap.TRACK_LIST, mTrackList);
+        outState.putStringArrayList(KeyMap.DOWNLOAD_LIST, downloadList);
+        outState.putStringArrayList(KeyMap.PLAY_LIST, playList);
+        outState.putString(KeyMap.TITLE, curTitle);
+        outState.putInt(KeyMap.OFFSET, offset);
+        super.onSaveInstanceState(outState);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         bindService(new Intent(this, DownloadService.class), mDownloadConnection, Context.BIND_AUTO_CREATE);
-
         mReciever = new PlayerReceiver();
 
         IntentFilter intentFilter = new IntentFilter();
@@ -131,6 +176,12 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
     }
 
     @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        titleTv.setText(curTitle);
+    }
+
+    @Override
     protected void onPause() {
         unregisterReceiver(mReciever);
         unbindService(mPlayerConnection);
@@ -140,40 +191,57 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
 
     @Override
     public void onDataRecieved(JSONObject json) {
-        ArrayList<Song> songs = new ArrayList<Song>();
+        ArrayList<Track> data = new ArrayList<Track>();
         try {
+            if(!json.has(JSONField.RESPONSE)) {
+                mListview.onLoadMoreComplete();
+                return;
+            }
             JSONArray array = json.getJSONArray(JSONField.RESPONSE);
+            if(array.length() == 0) {
+                mListview.onLoadMoreComplete();
+                return;
+            }
             for (int i = 0; i < array.length(); i++) {
-                Song song = new Song(array.getJSONObject(i));
-                song.setTrackStatus(isFileOnDevice(song.getAid()), 0);
-                songs.add(song);
+                Track track = new Track(array.getJSONObject(i));
+                track.setTrackStatus(isFileOnDevice(track.getAid()), 0);
+                data.add(track);
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        mAdapter = new MusicAdapter(MainActivity.this, songs);
-        mListview.setAdapter(mAdapter);
+
+        mTrackList.addAll(data);
+        if(mAdapter == null) {
+            mAdapter = new MusicAdapter(MainActivity.this, mTrackList);
+            mListview.setAdapter(mAdapter);
+        }
+        else {
+            mAdapter.addItems(data);
+        }
+        mListview.onLoadMoreComplete();
     }
 
 
-    private AdapterView.OnItemClickListener onSongClickListener = new AdapterView.OnItemClickListener() {
-        @Override
-        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            playBack(position);
-        }
-    };
+    private void loadMusicList() {
+        APICallHelper helper = APICallHelper.getInstance();
+        helper.attachListener(this);
+        helper.getMusicList("https://api.vk.com/method/audio.get?access_token=" + accessToken
+                + "&count=" + TRACKS_COUNT + "&offset=" + offset + "&need_user=0");
+    }
 
     private void playBack(int position) {
-        Song song = mAdapter.getItem(position);
-        String url = song.getUrl();
-        String audioId = song.getAid();
-        titleTv.setText(song.getArtist() + " — " + song.getTitle());
+        Track track = mAdapter.getItem(position);
+        String url = track.getUrl();
+        String audioId = track.getAid();
+        curTitle = track.getArtist() + " — " + track.getTitle();
+        titleTv.setText(curTitle);
 
         boolean isOnDevice = isFileOnDevice(audioId);
         String path = isOnDevice ? mPath + audioId : url;
 
         if (!isOnDevice && !isFileDownloading(audioId)) {
-            downloadingsList.add(audioId);
+            downloadList.add(audioId);
             mDownloadService.downloadFile(url, audioId);
         }
 
@@ -187,13 +255,13 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             mPlayerService.playPause();
             if (!currentPath.equals(url) && !currentPath.equals(mPath + audioId)) {
                 mPlayerService.setDataSource(path, url, audioId);
-                playingList.remove(currentAid);
+                playList.remove(currentAid);
             }
         } else {
             if (currentPath != null) {
                 if (!currentPath.equals(url) && !currentPath.equals(mPath + audioId)) {
                     mPlayerService.setDataSource(path, url, audioId);
-                    playingList.remove(currentAid);
+                    playList.remove(currentAid);
                 }
             } else {
                 mPlayerService.setDataSource(path, url, audioId);
@@ -203,7 +271,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
     }
 
     private boolean isFileDownloading(String aid) {
-        for (String _aid : downloadingsList) {
+        for (String _aid : downloadList) {
             if (_aid.equals(aid)) {
                 return true;
             }
@@ -214,7 +282,6 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
     private boolean isFileOnDevice(String aid) {
         File file = new File(mPath + aid);
         return file.exists();
-
     }
 
     private ServiceConnection mPlayerConnection = new ServiceConnection() {
@@ -244,19 +311,21 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
 
     @Override
     public void OnSongLoaded(String aid) {
-        playingList.add(aid);
+        playList.add(aid);
         playPauseIv.setImageResource(R.drawable.pause);
 
         playPauseIv.setClickable(true);
         prevIv.setClickable(true);
         nextIv.setClickable(true);
+        progressBar.setVisibility(View.INVISIBLE);
+        controlPanel.setVisibility(View.VISIBLE);
     }
 
     @Override
     public void OnSongFinished(String url) {
-        Song song = findItemByUrl(url);
-        if (song != null) {
-            int position = mAdapter.getItemPosition(song);
+        Track track = findItemByUrl(url);
+        if (track != null) {
+            int position = mAdapter.getItemPosition(track);
             playBack(position + 1);
         }
     }
@@ -265,13 +334,13 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
     public void OnPlaybackStatusChanged(String url, int time) {
         Log.d(url, "" + time);
 
-        Song song = findItemByUrl(url);
-        if (song == null)
+        Track track = findItemByUrl(url);
+        if (track == null)
             return;
 
-        int duration = song.getDuration();
+        int duration = track.getDuration();
 
-        String aid = song.getAid();
+        String aid = track.getAid();
         if (aid == null)
             return;
 
@@ -287,21 +356,21 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         }
     }
 
-    private Song findItemByAid(String aid) {
+    private Track findItemByAid(String aid) {
         for (int i = 0; i < mAdapter.getCount(); i++) {
-            Song song = mAdapter.getItem(i);
-            if (song.getAid().equals(aid)) {
-                return song;
+            Track track = mAdapter.getItem(i);
+            if (track.getAid().equals(aid)) {
+                return track;
             }
         }
         return null;
     }
 
-    private Song findItemByUrl(String url) {
+    private Track findItemByUrl(String url) {
         for (int i = 0; i < mAdapter.getCount(); i++) {
-            Song song = mAdapter.getItem(i);
-            if (song.getUrl().equals(url)) {
-                return song;
+            Track track = mAdapter.getItem(i);
+            if (track.getUrl().equals(url)) {
+                return track;
             }
         }
         return null;
@@ -313,19 +382,23 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
 
     @Override
     public void onDownloadCompleted(String aid) {
-        Song song = findItemByAid(aid);
-        song.setTrackStatus(isFileOnDevice(aid), 0);
-        downloadingsList.remove(aid);
+        Track track = findItemByAid(aid);
+        track.setTrackStatus(isFileOnDevice(aid), 0);
+        downloadList.remove(aid);
     }
 
     class MusicAdapter extends BaseAdapter {
-
         private LayoutInflater inflater;
-        private ArrayList<Song> data;
+        private ArrayList<Track> data;
 
-        public MusicAdapter(Context context, ArrayList<Song> data) {
+        public MusicAdapter(Context context, ArrayList<Track> data) {
             inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             this.data = data;
+        }
+
+        public void addItems(ArrayList<Track> additionalData){
+            data.addAll(additionalData);
+            notifyDataSetChanged();
         }
 
         @Override
@@ -334,14 +407,14 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         }
 
         @Override
-        public Song getItem(int position) {
+        public Track getItem(int position) {
             return data.get(position);
         }
 
-        public int getItemPosition(Song song) {
+        public int getItemPosition(Track track) {
             for (int i = 0; i < data.size(); i++) {
-                Song s = data.get(i);
-                if (s.equals(song))
+                Track _track = data.get(i);
+                if (_track.equals(track))
                     return i;
             }
             return -1;
@@ -360,26 +433,25 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
                 holder.labelTv = (TextView) convertView.findViewById(R.id.titleTv);
                 holder.durationTv = (TextView) convertView.findViewById(R.id.durationTv);
                 holder.playbackSb = (SeekBar) convertView.findViewById(R.id.playbackPb);
-                holder.downloadStatusCb = (CheckBox) convertView.findViewById(R.id.downloadStatusCb);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
             }
 
-            Song song = getItem(position);
-            holder.labelTv.setText(song.getArtist() + " - " + song.getTitle());
-            holder.durationTv.setText(song.getDuration() / 60 + ":" + (song.getDuration() % 60 <= 9 ? 0 + "" + song.getDuration() % 60 : song.getDuration() % 60));
+            Track track = getItem(position);
+            holder.labelTv.setText(track.getArtist() + " - " + track.getTitle());
+            holder.durationTv.setText(track.getDuration() / 60 + ":" + (track.getDuration() % 60 <= 9 ? 0 + "" + track.getDuration() % 60 : track.getDuration() % 60));
 
-            TrackStatus status = song.getTrackStatus();
-            holder.downloadStatusCb.setChecked(status.isDownloaded());
+            TrackStatus status = track.getTrackStatus();
+            convertView.setBackgroundColor(getResources().getColor(status.isDownloaded() ? R.color.download_bg : R.color.white));
 
             boolean isPlaying = false;
-            for (String aid : playingList) {
-                if (aid.equals(song.getAid()))
+            for (String aid : playList) {
+                if (aid.equals(track.getAid()))
                     isPlaying = true;
             }
 
-            PlayBackStatus playBackStatus = song.getPlayBackStatus();
+            PlayBackStatus playBackStatus = track.getPlayBackStatus();
             if (playBackStatus != null) {
                 if (playBackStatus.getProgress() > 0) {
                     holder.playbackSb.setVisibility(View.VISIBLE);
@@ -401,14 +473,12 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             TextView labelTv;
             TextView durationTv;
             SeekBar playbackSb;
-            CheckBox downloadStatusCb;
         }
     }
 
     private SeekBar.OnSeekBarChangeListener seekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-
         }
 
         @Override

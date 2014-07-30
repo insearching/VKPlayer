@@ -47,7 +47,6 @@ public class APICallHelper {
                 HttpGet get = new HttpGet(params[0]);
                 HttpResponse response = httpclient.execute(get);
                 return  EntityUtils.toString(response.getEntity());
-
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -145,7 +145,6 @@ public class PlayerService extends Service {
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
-
             callback.OnSongLoaded(aid);
 
             player.start();

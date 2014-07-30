@@ -5,4 +5,5 @@
     <dimen name="bottom_panel_height">100dp</dimen>
     <dimen name="button_padding">10dp</dimen>
     <dimen name="default_text_size">20sp</dimen>
+    <dimen name="row_height">75dp</dimen>
 </resources>
