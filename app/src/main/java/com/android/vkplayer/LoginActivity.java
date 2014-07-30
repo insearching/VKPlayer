@@ -38,6 +38,7 @@ public class LoginActivity extends Activity {
                         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                         intent.putExtra(KeyMap.ACCESS_TOKEN, accessToken);
                         startActivity(intent);
+                        finish();
                     } else {
                         view.loadUrl(urlStr);
                     }

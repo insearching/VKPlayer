@@ -31,7 +31,7 @@
         android:layout_centerInParent="true">
 
         <ProgressBar
-            android:id="@+id/progressBar"
+            android:id="@+id/progressBarFooter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
@@ -42,7 +42,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_toRightOf="@+id/progressBar"
+            android:layout_toRightOf="@+id/progressBarFooter"
             android:padding="3dp"
             android:text="@string/loading"
             android:textSize="24sp"

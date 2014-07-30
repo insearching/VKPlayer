@@ -107,8 +107,6 @@ public class Track implements Parcelable {
         url = in.readString();
         lyricsId = in.readString();
         genre = in.readString();
-        status = (TrackStatus) in.readValue(TrackStatus.class.getClassLoader());
-        playbackStatus = (PlayBackStatus) in.readValue(PlayBackStatus.class.getClassLoader());
     }
 
     @Override
@@ -126,8 +124,6 @@ public class Track implements Parcelable {
         dest.writeString(url);
         dest.writeString(lyricsId);
         dest.writeString(genre);
-        dest.writeValue(status);
-        dest.writeValue(playbackStatus);
     }
 
     @SuppressWarnings("unused")
