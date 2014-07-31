@@ -20,7 +20,7 @@ public class Track implements Parcelable {
     private String lyricsId = null;
     private String genre;
 
-    private TrackStatus status = null;
+    private DownloadStatus status = null;
     private PlayBackStatus playbackStatus;
 
     public Track(JSONObject song){
@@ -39,7 +39,7 @@ public class Track implements Parcelable {
             e.printStackTrace();
         }
 
-        status = new TrackStatus(false, 0);
+        status = new DownloadStatus(false, 0);
     }
 
     @Override
@@ -83,10 +83,10 @@ public class Track implements Parcelable {
 
 
     public void setTrackStatus(boolean isDownloaded, int progress) {
-        status = new TrackStatus(isDownloaded, progress);
+        status = new DownloadStatus(isDownloaded, progress);
     }
 
-    public TrackStatus getTrackStatus(){
+    public DownloadStatus getTrackStatus(){
         return status;
     }
 

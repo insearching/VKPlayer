@@ -22,9 +22,9 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.android.vkplayer.api.APICallHelper;
+import com.android.vkplayer.entity.DownloadStatus;
 import com.android.vkplayer.entity.PlayBackStatus;
 import com.android.vkplayer.entity.Track;
-import com.android.vkplayer.entity.TrackStatus;
 import com.android.vkplayer.service.DownloadService;
 import com.android.vkplayer.service.PlayerService;
 import com.android.vkplayer.utils.JSONField;
@@ -100,35 +100,9 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             }
         });
         prevIv = (ImageView) findViewById(R.id.prevIv);
-        prevIv.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String aid = mPlayerService.getAid();
-                if (aid == null)
-                    return;
-                Track track = findItemByAid(aid);
-                if (track == null)
-                    return;
-                int position = mAdapter.getItemPosition(track);
-                if (position != -1)
-                    playBack(position - 1);
-            }
-        });
+        prevIv.setOnClickListener(controlClickListener);
         nextIv = (ImageView) findViewById(R.id.nextIv);
-        nextIv.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String aid = mPlayerService.getAid();
-                if (aid == null)
-                    return;
-                Track track = findItemByAid(aid);
-                if (track == null)
-                    return;
-                int position = mAdapter.getItemPosition(track);
-                if (position != -1)
-                    playBack(position + 1);
-            }
-        });
+        nextIv.setOnClickListener(controlClickListener);
 
         Bundle bundle = getIntent().getExtras();
         if (bundle != null) {
@@ -193,12 +167,12 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
     public void onDataRecieved(JSONObject json) {
         ArrayList<Track> data = new ArrayList<Track>();
         try {
-            if(!json.has(JSONField.RESPONSE)) {
+            if (!json.has(JSONField.RESPONSE)) {
                 mListview.onLoadMoreComplete();
                 return;
             }
             JSONArray array = json.getJSONArray(JSONField.RESPONSE);
-            if(array.length() == 0) {
+            if (array.length() == 0) {
                 mListview.onLoadMoreComplete();
                 return;
             }
@@ -212,16 +186,39 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         }
 
         mTrackList.addAll(data);
-        if(mAdapter == null) {
+        if (mAdapter == null) {
             mAdapter = new MusicAdapter(MainActivity.this, mTrackList);
             mListview.setAdapter(mAdapter);
-        }
-        else {
+        } else {
             mAdapter.addItems(data);
         }
         mListview.onLoadMoreComplete();
     }
 
+
+    View.OnClickListener controlClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            String aid = mPlayerService.getAid();
+            if (aid == null)
+                return;
+            Track track = findItemByAid(aid);
+            if (track == null)
+                return;
+            int position = mAdapter.getItemPosition(track);
+
+            switch (v.getId()) {
+                case R.id.prevIv:
+                    if (position != -1)
+                        playBack(position - 1);
+                    break;
+                case R.id.nextIv:
+                    if (position != -1)
+                        playBack(position + 1);
+                    break;
+            }
+        }
+    };
 
     private void loadMusicList() {
         APICallHelper helper = APICallHelper.getInstance();
@@ -237,6 +234,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
         curTitle = track.getArtist() + " — " + track.getTitle();
         titleTv.setText(curTitle);
 
+
         boolean isOnDevice = isFileOnDevice(audioId);
         String path = isOnDevice ? mPath + audioId : url;
 
@@ -251,23 +249,24 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
 
         String currentPath = mPlayerService.getPath();
         String currentAid = mPlayerService.getAid();
+
+        if (mPlayerService.isPlaying() && currentPath != null && !currentPath.equals(path)) {
+            mPlayerService.setDataSource(path, url, audioId);
+        }
         if (mPlayerService.isPlaying()) {
-            mPlayerService.playPause();
-            if (!currentPath.equals(url) && !currentPath.equals(mPath + audioId)) {
+            if (currentPath != null && !currentPath.equals(path)) {
                 mPlayerService.setDataSource(path, url, audioId);
                 playList.remove(currentAid);
+                mAdapter.notifyDataSetChanged();
             }
         } else {
-            if (currentPath != null) {
-                if (!currentPath.equals(url) && !currentPath.equals(mPath + audioId)) {
-                    mPlayerService.setDataSource(path, url, audioId);
-                    playList.remove(currentAid);
-                }
-            } else {
-                mPlayerService.setDataSource(path, url, audioId);
+            mPlayerService.setDataSource(path, url, audioId);
+            if (currentPath != null && !currentPath.equals(path)) {
+                playList.remove(currentAid);
+                mAdapter.notifyDataSetChanged();
             }
-            mPlayerService.playPause();
         }
+        mPlayerService.playPause();
     }
 
     private boolean isFileDownloading(String aid) {
@@ -396,7 +395,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             this.data = data;
         }
 
-        public void addItems(ArrayList<Track> additionalData){
+        public void addItems(ArrayList<Track> additionalData) {
             data.addAll(additionalData);
             notifyDataSetChanged();
         }
@@ -432,7 +431,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
                 convertView = inflater.inflate(R.layout.row_track, parent, false);
                 holder.labelTv = (TextView) convertView.findViewById(R.id.titleTv);
                 holder.durationTv = (TextView) convertView.findViewById(R.id.durationTv);
-                holder.playbackSb = (SeekBar) convertView.findViewById(R.id.playbackPb);
+                holder.playbackSb = (SeekBar) convertView.findViewById(R.id.playbackSb);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
@@ -442,7 +441,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             holder.labelTv.setText(track.getArtist() + " - " + track.getTitle());
             holder.durationTv.setText(track.getDuration() / 60 + ":" + (track.getDuration() % 60 <= 9 ? 0 + "" + track.getDuration() % 60 : track.getDuration() % 60));
 
-            TrackStatus status = track.getTrackStatus();
+            DownloadStatus status = track.getTrackStatus();
             convertView.setBackgroundColor(getResources().getColor(status.isDownloaded() ? R.color.download_bg : R.color.white));
 
             boolean isPlaying = false;
@@ -451,21 +450,23 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
                     isPlaying = true;
             }
 
+
             PlayBackStatus playBackStatus = track.getPlayBackStatus();
             if (playBackStatus != null) {
                 if (playBackStatus.getProgress() > 0) {
                     holder.playbackSb.setVisibility(View.VISIBLE);
-                    holder.playbackSb.setMax(playBackStatus.getDuaration());
+                    holder.playbackSb.setMax(playBackStatus.getDuration());
                     holder.playbackSb.setProgress(playBackStatus.getProgress());
                     holder.playbackSb.setOnSeekBarChangeListener(seekBarChangeListener);
                 }
 
-                if (playBackStatus.getProgress() == playBackStatus.getDuaration())
+                if (playBackStatus.getProgress() == playBackStatus.getDuration())
                     holder.playbackSb.setVisibility(View.INVISIBLE);
             }
 
             if (!isPlaying)
                 holder.playbackSb.setVisibility(View.INVISIBLE);
+
             return convertView;
         }
 

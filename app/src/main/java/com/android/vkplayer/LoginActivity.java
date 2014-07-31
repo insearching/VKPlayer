@@ -32,8 +32,7 @@ public class LoginActivity extends Activity {
 
                     if(url.getRef() == null)
                         return false;
-                    if (url.getProtocol().equals("https") && url.getHost().equals("oauth.vk.com")
-                            && url.getRef().contains(KeyMap.ACCESS_TOKEN)) {
+                    if (url.getRef().contains(KeyMap.ACCESS_TOKEN)) {
                         String accessToken = getAccessToken(url.getRef());
                         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                         intent.putExtra(KeyMap.ACCESS_TOKEN, accessToken);

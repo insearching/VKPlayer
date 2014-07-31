@@ -21,6 +21,7 @@ public class PlayerService extends Service {
     private final IBinder mBinder = new PlayerBinder();
     private String url;
     private String aid;
+    private boolean isPreparing;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -68,8 +69,9 @@ public class PlayerService extends Service {
 
         if (task != null)
             task.cancel(true);
-        if (player != null) {
+        if (player != null || isPreparing) {
             player.stop();
+            player.reset();
             player.release();
             player = null;
         }
@@ -106,7 +108,6 @@ public class PlayerService extends Service {
     }
 
     private Handler mHandler = new Handler();
-    private Runnable mRunnable;
 
     class PlayerTask extends AsyncTask<String, Void, String> {
         @Override
@@ -114,27 +115,15 @@ public class PlayerService extends Service {
             try {
                 player = new MediaPlayer();
                 player.setDataSource(params[0]);
-
-                mRunnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        if (player != null) {
-                            int mCurrentPosition = player.getCurrentPosition() / 1000;
-                            if (mCurrentPosition > 0)
-                                callback.OnPlaybackStatusChanged(url, mCurrentPosition);
-                        }
-                        mHandler.postDelayed(this, 1100);
-                    }
-                };
-
-
                 player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     @Override
                     public void onCompletion(MediaPlayer mp) {
                         callback.OnSongFinished(url);
                     }
                 });
+                isPreparing = true;
                 player.prepare();
+
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -145,10 +134,23 @@ public class PlayerService extends Service {
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
+
+            isPreparing = false;
             callback.OnSongLoaded(aid);
 
             player.start();
-            mRunnable.run();
+
+            new Runnable() {
+                @Override
+                public void run() {
+                    if (player != null) {
+                        int mCurrentPosition = player.getCurrentPosition() / 1000;
+                        if (mCurrentPosition > 0)
+                            callback.OnPlaybackStatusChanged(url, mCurrentPosition);
+                    }
+                    mHandler.postDelayed(this, 1100);
+                }
+            }.run();
 
             Intent intent = new Intent();
             intent.setAction(KeyMap.ACTION_PLAYER);

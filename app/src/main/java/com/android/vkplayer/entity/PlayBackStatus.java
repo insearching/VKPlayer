@@ -5,21 +5,27 @@ package com.android.vkplayer.entity;
  */
 public class PlayBackStatus {
     private int progress;
+    private int duration;
+    private boolean isStoped;
 
-
-
-    private int duaration;
-
-    public PlayBackStatus(int progress, int duaration){
+    public PlayBackStatus(int progress, int duration){
         this.progress = progress;
-        this.duaration = duaration;
+        this.duration = duration;
+    }
+
+    public void setStoped(boolean flag){
+        isStoped = flag;
+    }
+
+    public boolean isStoped(){
+        return isStoped;
     }
 
     public int getProgress() {
         return progress;
     }
 
-    public int getDuaration() {
-        return duaration;
+    public int getDuration() {
+        return duration;
     }
 }
