@@ -12,16 +12,9 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name=".MainActivity"
-            android:label="@string/title_activity_main">
+            android:label="@string/app_name" >
         </activity>
-        <activity
-            android:name=".LoginActivity" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <activity android:name=".LoginActivity" />
 
         <service
             android:name=".service.PlayerService"
@@ -35,9 +28,15 @@
         </service>
 
         <activity
-            android:name=".MyActivity"
-            android:label="@string/title_activity_my" >
+            android:name=".SplashActivity"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
+        <meta-data android:name="com.crashlytics.ApiKey" android:value="f8120d7f2dc29669c7bc699b504687910edbcef5"/>
     </application>
 
 </manifest>

@@ -7,6 +7,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
@@ -196,7 +199,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
     }
 
 
-    View.OnClickListener controlClickListener = new View.OnClickListener() {
+    private View.OnClickListener controlClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             String aid = mPlayerService.getAid();
@@ -206,15 +209,15 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             if (track == null)
                 return;
             int position = mAdapter.getItemPosition(track);
+            if (position == -1)
+                return;
 
             switch (v.getId()) {
                 case R.id.prevIv:
-                    if (position != -1)
-                        playBack(position - 1);
+                    playBack(position - 1);
                     break;
                 case R.id.nextIv:
-                    if (position != -1)
-                        playBack(position + 1);
+                    playBack(position + 1);
                     break;
             }
         }
@@ -227,10 +230,13 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
                 + "&count=" + TRACKS_COUNT + "&offset=" + offset + "&need_user=0");
     }
 
+
     private void playBack(int position) {
         Track track = mAdapter.getItem(position);
         String url = track.getUrl();
         String audioId = track.getAid();
+
+
         curTitle = track.getArtist() + " — " + track.getTitle();
         titleTv.setText(curTitle);
 
@@ -243,28 +249,34 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             mDownloadService.downloadFile(url, audioId);
         }
 
+
+        if (isOnDevice) {
+            android.media.MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+            mmr.setDataSource(path);
+
+            byte[] data = mmr.getEmbeddedPicture();
+            //coverart is an Imageview object
+
+            // convert the byte array to a bitmap
+            if (data != null) {
+                Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                ImageView iconIv = (ImageView) findViewById(R.id.icon);
+                iconIv.setImageBitmap(bitmap);
+                iconIv.setAdjustViewBounds(true);
+//                iconIv.setLayoutParams(new RelativeLayout.LayoutParams(100, 100));
+            }
+        }
+
         playPauseIv.setClickable(false);
         prevIv.setClickable(false);
         nextIv.setClickable(false);
 
-        String currentPath = mPlayerService.getPath();
         String currentAid = mPlayerService.getAid();
 
-        if (mPlayerService.isPlaying() && currentPath != null && !currentPath.equals(path)) {
-            mPlayerService.setDataSource(path, url, audioId);
-        }
-        if (mPlayerService.isPlaying()) {
-            if (currentPath != null && !currentPath.equals(path)) {
-                mPlayerService.setDataSource(path, url, audioId);
-                playList.remove(currentAid);
-                mAdapter.notifyDataSetChanged();
-            }
-        } else {
-            mPlayerService.setDataSource(path, url, audioId);
-            if (currentPath != null && !currentPath.equals(path)) {
-                playList.remove(currentAid);
-                mAdapter.notifyDataSetChanged();
-            }
+        mPlayerService.setDataSource(path, url, audioId);
+        if (playList.contains(currentAid)) {
+            playList.remove(currentAid);
+            mAdapter.notifyDataSetChanged();
         }
         mPlayerService.playPause();
     }
@@ -432,6 +444,7 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
                 holder.labelTv = (TextView) convertView.findViewById(R.id.titleTv);
                 holder.durationTv = (TextView) convertView.findViewById(R.id.durationTv);
                 holder.playbackSb = (SeekBar) convertView.findViewById(R.id.playbackSb);
+
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
@@ -442,14 +455,14 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
             holder.durationTv.setText(track.getDuration() / 60 + ":" + (track.getDuration() % 60 <= 9 ? 0 + "" + track.getDuration() % 60 : track.getDuration() % 60));
 
             DownloadStatus status = track.getTrackStatus();
-            convertView.setBackgroundColor(getResources().getColor(status.isDownloaded() ? R.color.download_bg : R.color.white));
+            holder.labelTv.setTextColor(getResources().getColor(status.isDownloaded() ? R.color.black : R.color.dark_slate_gray));
+//            convertView.setBackgroundResource(status.isDownloaded() ? R.color.gray_1 : R.color.white);
 
             boolean isPlaying = false;
             for (String aid : playList) {
                 if (aid.equals(track.getAid()))
                     isPlaying = true;
             }
-
 
             PlayBackStatus playBackStatus = track.getPlayBackStatus();
             if (playBackStatus != null) {
@@ -459,7 +472,6 @@ public class MainActivity extends Activity implements APICallHelper.APIListener,
                     holder.playbackSb.setProgress(playBackStatus.getProgress());
                     holder.playbackSb.setOnSeekBarChangeListener(seekBarChangeListener);
                 }
-
                 if (playBackStatus.getProgress() == playBackStatus.getDuration())
                     holder.playbackSb.setVisibility(View.INVISIBLE);
             }

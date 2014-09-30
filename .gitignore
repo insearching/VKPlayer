@@ -41,3 +41,8 @@ local.properties
 
 # Sandbox stuff
 _sandbox
+
+import-summary.txt
+
+# Crashlytics
+app/crashlytics.properties

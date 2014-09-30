@@ -2,10 +2,9 @@
 <resources>
 
     <string name="app_name">VKPlayer</string>
-    <string name="title_activity_main">VK music</string>
-    <string name="title_activity_login">Login to VK</string>
-    <string name="title_activity_my">MyActivity</string>
-    <string name="title_activity_productivity">ProductivityActivity</string>
     <string name="loading">Loading music list...</string>
+    <string name="title_activity_splash">SplashActivity</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
 
 </resources>

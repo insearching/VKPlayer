@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bottom_menu_bg">#bf968EFF</color>
-    <color name="light_grey">#a1a1a1</color>
+    <color name="bottom_menu_bg">#97dba5</color>
     <color name="white">#eeeeee</color>
-    <color name="download_bg">#ffFF8EDC</color>
-    <color name="divider_bg">#ffD99AFF</color>
+    <color name="download_bg">#E8DC67</color>
+    <color name="track_bg">#eee7a0</color>
+    <color name="text_color">#121250</color>
 
     <!-- Load more listview-->
-    <color name="dark_slate_gray">#2F4F4F</color>
+    <color name="dark_slate_gray">#5A706E</color>
     <color name="gray_2">#AFAFAF</color>
     <color name="gray_1">#C0C0C0</color>
     <color name="black">#000000</color>
+
+    <!-- Theme colors-->
+    <color name="color1">#5A706E</color>
+    <color name="color2">#E8DC67</color>
+    <color name="color3">#ABD3FF</color>
+    <color name="color4">#E84F3A</color>
+    <color name="color5">#C88BFF</color>
+    <color name="splash_bg">#496c93</color>
 </resources>
